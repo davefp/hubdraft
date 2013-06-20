@@ -1,0 +1,12 @@
+{
+    "id": your_document_id,
+    "name": "The Name of your Document",
+    "content": "The plain-text markdown of your document",
+    "content_html": "Your document rendered as HTML",
+    "user": {
+        id: 1,
+        email: 'usersemail@example.com'
+    },
+    "created_at": "2013-05-23T14:11:54-05:00",
+    "updated_at": "2013-05-23T14:11:58-05:00"
+}
