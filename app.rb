@@ -3,6 +3,7 @@ require 'sinatra/config_file'
 require 'grit'
 require 'stringex'
 require 'json'
+require 'tmpdir'
 
 class HubDraft < Sinatra::Base
 
@@ -18,32 +19,36 @@ class HubDraft < Sinatra::Base
   private
 
   def publish(payload)
-    setup_dirs
+    Grit.debug = true
 
-    grit = Grit::Git.new("#{settings.base_dir}/grit")
+    Dir.mktmpdir 'hubdraft' do |root_dir|
+      setup_dirs root_dir
 
-    repo_dir = "#{settings.base_dir}/repo"
-    Dir.chdir(repo_dir) do
+      grit = Grit::Git.new("#{root_dir}/grit")
 
-      grit.clone({:quiet => false, :verbose => true, :progress => true, :timeout => false}, settings.repo_address, ".")
+      repo_dir = "#{root_dir}/repo"
+      Dir.chdir(repo_dir) do
 
-      repo = Grit::Repo.new(".")
+        grit.clone({:quiet => false, :verbose => true, :progress => true, :timeout => false}, settings.repo_address, ".")
 
-      file_path = "./_posts/#{Time.now.strftime('%Y-%m-%d')}-#{payload["name"].to_url}.md"
+        repo = Grit::Repo.new(".")
 
-      File.open(file_path, "w") do |f|
-        f.write payload["content"]
+        file_path = "./_posts/#{Time.now.strftime('%Y-%m-%d')}-#{payload["name"].to_url}.md"
+
+        File.open(file_path, "w") do |f|
+          f.write payload["content"]
+        end
+
+        repo.add file_path
+
+        repo.commit_index("test commit!")
+        repo.git.push({}, 'origin', 'master')
       end
-
-      repo.add file_path
-
-      repo.commit_index("test commit!")
     end
   end
 
-  def setup_dirs
-    Dir.mkdir("#{settings.base_dir}") unless Dir.exists? "#{settings.base_dir}"
-    Dir.mkdir("#{settings.base_dir}/grit") unless Dir.exists? "#{settings.base_dir}/grit"
-    Dir.mkdir("#{settings.base_dir}/repo") unless Dir.exists? "#{settings.base_dir}/repo"
+  def setup_dirs(root_dir)
+    Dir.mkdir("#{root_dir}/grit")
+    Dir.mkdir("#{root_dir}/repo")
   end
 end
